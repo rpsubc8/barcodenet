@@ -1,26 +1,45 @@
 {USES Graph,Crt;}
 USES Crt;
+TYPE
+ tvideo=(textmode,cga320,cga640,vga320);
 (* 0 una posicion, 1 2 posiciones *)
 CONST
+ cgaX:ARRAY[0..11] of byte=(0,1,1,0,1,0,0,1,0,0,1,0);
  codeX:array[0..8] of byte=(0,1,0,0,1,0,1,0,0);
  textX='о нлонн';{en negativo de color}
+ cgaF:ARRAY[0..11] of byte=(0,1,0,0,1,0,0,1,1,0,1,0);
  codeF:array[0..8] of byte=(0,0,1,0,1,1,0,0,0);
  textF='оонл нн';
  codeE:array[0..8] of byte=(1,0,0,0,1,1,0,0,0);
+ cgaE:array[0..11] of byte=(0,0,1,0,1,0,0,1,1,0,1,0);
  codeD:array[0..8] of byte=(0,0,0,0,1,1,0,0,1);
+ cgaD:array[0..11] of byte=(0,1,0,1,0,0,1,1,0,1,0,0);
  codeC:array[0..8] of byte=(1,0,1,0,0,1,0,0,0);
+ cgaC:array[0..11] of byte=(0,0,1,0,0,1,0,1,1,0,1,0);
  codeB:array[0..8] of byte=(0,0,1,0,0,1,0,0,1);
+ cgaB:array[0..11] of byte=(0,1,0,0,1,0,1,1,0,1,0,0);
  codeA:array[0..8] of byte=(1,0,0,0,0,1,0,0,1);
+ cgaA:array[0..11] of byte=(0,0,1,0,1,0,1,1,0,1,0,0);
  code9:array[0..8] of byte=(0,0,1,1,0,0,1,0,0);
+ cga9:array[0..11] of byte=(0,1,0,0,1,1,0,1,0,0,1,0);
  code8:array[0..8] of byte=(1,0,0,1,0,0,1,0,0);
+ cga8:array[0..11] of byte=(0,0,1,0,1,1,0,1,0,0,1,0);
  code7:array[0..8] of byte=(0,0,0,1,0,0,1,0,1);
+ cga7:array[0..11] of byte=(0,1,0,1,1,0,1,0,0,1,0,0);
  code6:array[0..8] of byte=(0,0,1,1,1,0,0,0,0);
+ cga6:array[0..11] of byte=(0,1,0,0,1,1,0,0,1,0,1,0);
  code5:array[0..8] of byte=(1,0,0,1,1,0,0,0,0);
+ cga5:array[0..11] of byte=(0,0,1,0,1,1,0,0,1,0,1,0);
  code4:array[0..8] of byte=(0,0,0,1,1,0,0,0,1);
+ cga4:array[0..11] of byte=(0,1,0,1,1,0,0,1,0,1,0,0);
  code3:array[0..8] of byte=(1,0,1,1,0,0,0,0,0);
+ cga3:array[0..11] of byte=(0,0,1,0,0,1,1,0,1,0,1,0);
  code2:array[0..8] of byte=(0,0,1,1,0,0,0,0,1);
+ cga2:array[0..11] of byte=(0,1,0,0,1,1,0,1,0,1,0,0);
  code1:array[0..8] of byte=(1,0,0,1,0,0,0,0,1);
+ cga1:array[0..11] of byte=(0,0,1,0,1,1,0,1,0,1,0,0);
  code0:array[0..8] of byte=(0,0,0,1,1,0,1,0,0);
+ cga0:array[0..11] of byte=(0,1,0,1,1,0,0,1,0,0,1,0);
 TYPE
  SCRarray=ARRAY[0..319,0..199] OF byte;
  PTRArray=^SCRarray;
@@ -31,9 +50,169 @@ VAR
  globalPOSY: integer;
  globalCad: string;
  Pantalla: PTRarray;
- volcado:ARRAY[1..64000]OF BYTE ABSOLUTE $A000:0000;
+ {volcado:ARRAY[0..63999]OF BYTE ABSOLUTE $A000:0000;}
+ vcga:ARRAY[0..15999]OF BYTE ABSOLUTE $B800:0000;
+ vcga2:ARRAY[0..15999]OF BYTE ABSOLUTE $BA00:0000;
+ linea640cga:ARRAY[0..639]OF BYTE;
  x,y:INTEGER;
  globalGFXcolor:integer;
+{---------------------------------------------------------------------------}
+PROCEDURE SetCGA320x200; NEAR; ASSEMBLER;
+ASM MOV AX,4;INT 10h END;
+{---------------------------------------------------------------------------}
+PROCEDURE SetCGA640x480; NEAR; ASSEMBLER;
+ASM MOV AX,6;INT 10h END;
+{---------------------------------------------------------------------------}
+PROCEDURE DrawCODE39cga(cad:string;modo:tvideo);
+VAR
+ i,j:word;
+ cont:word;
+ aux:byte;
+BEGIN
+ cont:=0;
+ FOR j:=0 TO 99 DO
+  FOR i:=0 TO 79 DO
+   BEGIN vcga[cont]:=$FF; vcga2[cont]:=$FF; cont:=cont+1; END;
+ FOR i:=0 TO 319 DO linea640cga[i]:=1;{Son 320 pixels}
+
+ cont:=50;
+ FOR j:=1 TO length(cad) DO
+  BEGIN
+   FOR i:=0 TO 11 DO
+    BEGIN
+     CASE cad[j] OF
+      '*':linea640cga[cont]:=cgaX[i];
+      'F':linea640cga[cont]:=cgaF[i];
+      'E':linea640cga[cont]:=cgaE[i];
+      'D':linea640cga[cont]:=cgaD[i];
+      'C':linea640cga[cont]:=cgaC[i];
+      'B':linea640cga[cont]:=cgaB[i];
+      'A':linea640cga[cont]:=cgaA[i];
+      '9':linea640cga[cont]:=cga9[i];
+      '8':linea640cga[cont]:=cga8[i];
+      '7':linea640cga[cont]:=cga7[i];
+      '6':linea640cga[cont]:=cga6[i];
+      '5':linea640cga[cont]:=cga5[i];
+      '4':linea640cga[cont]:=cga4[i];
+      '3':linea640cga[cont]:=cga3[i];
+      '2':linea640cga[cont]:=cga2[i];
+      '1':linea640cga[cont]:=cga1[i];
+      '0':linea640cga[cont]:=cga0[i];
+     END;
+     cont:=cont+1;
+    END;
+    cont:=cont+1;
+  END;
+
+ cont:=0;
+ FOR j:=20 TO 50 DO
+  BEGIN
+   cont:=0;
+   FOR i:=0 TO 79 DO
+    BEGIN
+     aux:=(linea640cga[cont] SHL 7)OR(linea640cga[cont] SHL 6); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 5)OR(linea640cga[cont] SHL 4); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 3)OR(linea640cga[cont] SHL 2); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 1)OR(linea640cga[cont]); cont:=cont+1;
+     vcga[(j*80)+i]:=aux;
+     vcga2[(j*80)+i]:=aux;
+    END;
+  END;
+END;
+{---------------------------------------------------------------------------}
+PROCEDURE PruebaCGA320x200;
+VAR
+ i,j:word;
+ cont:word;
+ aux:byte;
+BEGIN
+ cont:=0;
+ FOR j:=0 TO 99 DO
+  FOR i:=0 TO 79 DO
+   BEGIN vcga[cont]:=$FF; vcga2[cont]:=$FF; cont:=cont+1; END;
+ FOR i:=0 TO 319 DO linea640cga[i]:=1;{Son 320 pixels}
+
+ cont:=50;
+ FOR i:=0 TO 11 DO
+  BEGIN linea640cga[cont]:=cgaX[i]; cont:=cont+1; END;
+ cont:=cont+1;
+ FOR j:=0 TO 15
+  DO
+  BEGIN
+   FOR i:=0 TO 11 DO
+    BEGIN linea640cga[cont]:=cga9[i]; cont:=cont+1; END;
+   cont:=cont+1;
+  END;
+ FOR i:=0 TO 11 DO
+  BEGIN linea640cga[cont]:=cgaX[i]; cont:=cont+1; END;
+
+
+ cont:=0;
+ FOR j:=20 TO 50 DO
+  BEGIN
+   cont:=0;
+   FOR i:=0 TO 79 DO
+    BEGIN
+     aux:=(linea640cga[cont] SHL 7)OR(linea640cga[cont] SHL 6); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 5)OR(linea640cga[cont] SHL 4); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 3)OR(linea640cga[cont] SHL 2); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 1)OR(linea640cga[cont]); cont:=cont+1;
+(*     aux:=aux OR (linea640cga[cont] SHL 3); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 2); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 1); cont:=cont+1;
+     aux:=aux OR linea640cga[cont]; cont:=cont+1;*)
+     vcga[(j*80)+i]:=aux;
+     vcga2[(j*80)+i]:=aux;
+    END;
+  END;
+END;
+{---------------------------------------------------------------------------}
+PROCEDURE PruebaCGA;
+VAR
+ i,j:word;
+ cont:word;
+ aux:byte;
+BEGIN
+ cont:=0;
+ FOR j:=0 TO 99 DO
+  FOR i:=0 TO 79 DO
+   BEGIN vcga[cont]:=$FF; vcga2[cont]:=$FF; cont:=cont+1; END;
+ FOR i:=0 TO 639 DO linea640cga[i]:=1;
+ cont:=100;
+ FOR i:=0 TO 11 DO
+  BEGIN linea640cga[cont]:=cgaX[i]; cont:=cont+1; END;
+ cont:=cont+1;
+ FOR j:=0 TO 15
+  DO
+  BEGIN
+   FOR i:=0 TO 11 DO
+    BEGIN linea640cga[cont]:=cgaF[i]; cont:=cont+1; END;
+   cont:=cont+1;
+  END;
+ FOR i:=0 TO 11 DO
+  BEGIN linea640cga[cont]:=cgaX[i]; cont:=cont+1; END;
+
+
+ cont:=0;
+ FOR j:=40 TO 70 DO
+  BEGIN
+   cont:=0;
+   FOR i:=0 TO 79 DO
+    BEGIN
+     aux:=(linea640cga[cont] SHL 7); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 6); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 5); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 4); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 3); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 2); cont:=cont+1;
+     aux:=aux OR (linea640cga[cont] SHL 1); cont:=cont+1;
+     aux:=aux OR linea640cga[cont]; cont:=cont+1;
+     vcga[(j*80)+i]:=aux;
+     vcga2[(j*80)+i]:=aux;
+    END;
+  END;
+END;
+{---------------------------------------------------------------------------}
 PROCEDURE Retrazo; NEAR; ASSEMBLER;
 ASM
  MOV DX,3DAh
@@ -49,7 +228,7 @@ ASM MOV AX,13h; INT 10h END;
 PROCEDURE cls(scr: ptrarray); NEAR; ASSEMBLER;
 ASM LES di,scr; XOR ax,ax; MOV cx,32000; REP stosw END;
 {---------------------------------------------------------------------------}
-PROCEDURE DibujaTextCODE39(c:STRING);
+PROCEDURE DibujaTextCODE39(c:string);
 VAR i:integer;
 BEGIN
  FOR i:=0 TO 4 DO
@@ -67,7 +246,7 @@ END;
 PROCEDURE SetGFXcolor(c:byte);
 BEGIN globalGFXcolor:=c; END;
 {---------------------------------------------------------------------------}
-PROCEDURE DibujaGFXCODE39(c:array of byte);
+PROCEDURE DibujaGFXCODE39(var c:array of byte);
 VAR i:integer;contColor:integer;
 BEGIN
  contColor:=0;
@@ -125,9 +304,9 @@ BEGIN
   globalposx:=globalposx+1;
 END;*)
 {---------------------------------------------------------------------------}
-PROCEDURE EscribeCODE39(c:char;modoGFX:boolean);
+PROCEDURE EscribeCODE39(c:char;modoGFX:TVideo);
 BEGIN
- IF modoGFX=true THEN
+ IF modoGFX=vga320 THEN
   BEGIN
    CASE c of
     '*':DibujaGFXCODE39(codeX);
@@ -158,11 +337,17 @@ BEGIN
   END;
 END;
 {---------------------------------------------------------------------------}
-PROCEDURE EscribeCadena39(cad:string;modoGFX:boolean);
+PROCEDURE EscribeCadena39(cad:string;modoGFX:TVideo);
 VAR i:integer;
 BEGIN
- FOR i:=1 TO length(cad) DO
-  BEGIN EscribeCODE39(cad[i],modoGFX); END;
+ CASE modoGFX OF
+  textMode: BEGIN
+    FOR i:=1 TO length(cad) DO
+     BEGIN EscribeCODE39(cad[i],modoGFX); END;
+   END;
+  cga320: DrawCODE39cga(cad,modoGFX);
+  cga640: DrawCODE39cga(cad,modoGFX);
+ END;
 END;
 
 {---------------------------------------------------------------------------}
@@ -196,7 +381,9 @@ BEGIN
  TEXTCOLOR(0);
  globalPOSX:=6;
  GLOBALposy:=4;
- EscribeCadena39('*FFFFFFFF*',false);
+ (*EscribeCadena39('*FFFFFFFF*',textmode);*)
+ SetCGA320x200;
+ EscribeCadena39('*0123456789ABCDEF*',cga320);
  readln;
  Setmode13h;
  FOR x:=0 TO 318 DO
@@ -207,7 +394,13 @@ BEGIN
  globalGFXcolor:=0;
  globalPosX:=40;
  globalPosY:=30;
- EscribeCadena39('*0123456789ABCDEF*',true);
+(* EscribeCadena39('*0123456789ABCDEF*',true);
  readln;
+ SetCGA640x480;
+ PruebaCGA;
+ readln;*)
+ (*SetCGA320x200;
+ PruebaCGA320x200;
+ readln;*)
  ASM MOV AX,3h; INT 10h END;
 END.
