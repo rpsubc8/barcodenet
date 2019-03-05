@@ -63,19 +63,32 @@ ASM MOV AX,4;INT 10h END;
 PROCEDURE SetCGA640x480; NEAR; ASSEMBLER;
 ASM MOV AX,6;INT 10h END;
 {---------------------------------------------------------------------------}
-PROCEDURE DrawCODE39cga(cad:string;modo:tvideo);
+PROCEDURE ClsCGA;
+VAR
+ i,j:word;
+ cont:word;
+BEGIN
+ cont:=0;
+ FOR j:=0 TO 99 DO
+  FOR i:=0 TO 79 DO
+   BEGIN vcga[cont]:=$FF; vcga2[cont]:=$FF; cont:=cont+1; END;
+END;
+{---------------------------------------------------------------------------}
+PROCEDURE DrawCODE39cga(linea:word;cad:string;modo:tvideo);
 VAR
  i,j:word;
  cont:word;
  aux:byte;
 BEGIN
  cont:=0;
+ (*Borra pantalla blanco
  FOR j:=0 TO 99 DO
   FOR i:=0 TO 79 DO
    BEGIN vcga[cont]:=$FF; vcga2[cont]:=$FF; cont:=cont+1; END;
+ *)
  FOR i:=0 TO 319 DO linea640cga[i]:=1;{Son 320 pixels}
 
- cont:=50;
+ cont:=30;
  FOR j:=1 TO length(cad) DO
   BEGIN
    FOR i:=0 TO 11 DO
@@ -105,7 +118,7 @@ BEGIN
   END;
 
  cont:=0;
- FOR j:=20 TO 50 DO
+ FOR j:=5 TO 10 DO
   BEGIN
    cont:=0;
    FOR i:=0 TO 79 DO
@@ -114,8 +127,32 @@ BEGIN
      aux:=aux OR (linea640cga[cont] SHL 5)OR(linea640cga[cont] SHL 4); cont:=cont+1;
      aux:=aux OR (linea640cga[cont] SHL 3)OR(linea640cga[cont] SHL 2); cont:=cont+1;
      aux:=aux OR (linea640cga[cont] SHL 1)OR(linea640cga[cont]); cont:=cont+1;
-     vcga[(j*80)+i]:=aux;
-     vcga2[(j*80)+i]:=aux;
+     vcga[((linea+j)*80)+i]:=aux;
+     vcga2[((linea+j)*80)+i]:=aux;
+
+     (*vcga[((j+10)*80)+i]:=aux;
+     vcga2[((j+10)*80)+i]:=aux;
+
+     vcga[((j+20)*80)+i]:=aux;
+     vcga2[((j+20)*80)+i]:=aux;
+
+     vcga[((j+30)*80)+i]:=aux;
+     vcga2[((j+30)*80)+i]:=aux;
+
+     vcga[((j+40)*80)+i]:=aux;
+     vcga2[((j+40)*80)+i]:=aux;
+
+     vcga[((j+50)*80)+i]:=aux;
+     vcga2[((j+50)*80)+i]:=aux;
+
+     vcga[((j+60)*80)+i]:=aux;
+     vcga2[((j+60)*80)+i]:=aux;
+
+     vcga[((j+70)*80)+i]:=aux;
+     vcga2[((j+70)*80)+i]:=aux;
+
+     vcga[((j+80)*80)+i]:=aux;
+     vcga2[((j+80)*80)+i]:=aux;*)
     END;
   END;
 END;
@@ -337,7 +374,7 @@ BEGIN
   END;
 END;
 {---------------------------------------------------------------------------}
-PROCEDURE EscribeCadena39(cad:string;modoGFX:TVideo);
+PROCEDURE EscribeCadena39(linea:word;cad:string;modoGFX:TVideo);
 VAR i:integer;
 BEGIN
  CASE modoGFX OF
@@ -345,11 +382,85 @@ BEGIN
     FOR i:=1 TO length(cad) DO
      BEGIN EscribeCODE39(cad[i],modoGFX); END;
    END;
-  cga320: DrawCODE39cga(cad,modoGFX);
-  cga640: DrawCODE39cga(cad,modoGFX);
+  cga320: DrawCODE39cga(linea,cad,modoGFX);
+  cga640: DrawCODE39cga(linea,cad,modoGFX);
  END;
 END;
-
+{---------------------------------------------------------------------------}
+FUNCTION ByteToChar(d:byte):char;
+VAR
+ car:char;
+BEGIN
+ car:=' ';
+ CASE d OF
+  0: car:='0';
+  1: car:='1';
+  2: car:='2';
+  3: car:='3';
+  4: car:='4';
+  5: car:='5';
+  6: car:='6';
+  7: car:='7';
+  8: car:='8';
+  9: car:='9';
+  10:car:='A';
+  11:car:='B';
+  12:car:='C';
+  13:car:='D';
+  14:car:='E';
+  15:car:='F';
+ END;
+ ByteToChar:=car;
+END;
+{---------------------------------------------------------------------------}
+PROCEDURE SendFile(cad:string);
+VAR
+ f:FILE of Byte;
+ i,size:Longint;
+ cadAux:string;
+ car:char;
+ c:byte;
+ d:byte;
+ linea:word;
+ contLinea: word;
+BEGIN
+  ClsCGA;
+  linea:=1;
+  contLinea:=0;
+  cadAux:='';
+  Assign(f,cad);
+  {$I-}
+  Reset(f);
+  {$I+}
+  size:=FileSize(f)-1;
+  FOR i:=0 TO size DO
+   BEGIN
+    read(f,c);
+    d:=(c SHR 4)AND $0F;
+    car:= ByteToChar(d);
+    cadAux:=cadAux+car;
+    d:=(c AND $0F);
+    car:= ByteToChar(d);
+    cadAux:=cadAux+car;
+    IF ((i mod 8=0)AND (i<>0)) THEN
+     BEGIN
+      EscribeCadena39(linea,'*'+ByteToChar(contLinea mod 16)+cadAux+'*',cga320);
+      contLinea:=contLinea+1;
+      linea:=linea+10;
+      IF (linea>80) THEN
+       BEGIN
+(*        delay(100);*)
+        ClsCga;
+        linea:=1;
+       END;
+      cadAux:='';
+      (*delay(2000);
+      ClsCGA;
+      delay(1000);*)
+     END;
+   END;
+  Close(f);
+END;
 {---------------------------------------------------------------------------}
 BEGIN
  globalPosX:=100;
@@ -383,7 +494,8 @@ BEGIN
  GLOBALposy:=4;
  (*EscribeCadena39('*FFFFFFFF*',textmode);*)
  SetCGA320x200;
- EscribeCadena39('*0123456789ABCDEF*',cga320);
+ (*EscribeCadena39('*0123456789ABCDEF*',cga320);*)
+ SendFile('BIOS.PAS');
  readln;
  Setmode13h;
  FOR x:=0 TO 318 DO
