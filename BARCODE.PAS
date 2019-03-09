@@ -413,6 +413,70 @@ BEGIN
  ByteToChar:=car;
 END;
 {---------------------------------------------------------------------------}
+FUNCTION ByteToString(d:byte):string;
+VAR
+ auxReturn:string;
+BEGIN
+ auxReturn:='';
+ auxReturn:=ByteToChar((d SHR 4)AND $0F);
+ auxReturn:=auxReturn+ByteToChar(d AND $0F);
+ ByteToString:=auxReturn;
+END;
+{---------------------------------------------------------------------------}
+FUNCTION ExtFileToCode39(cad:string):string;
+VAR
+ auxCad:string;
+ car:char;
+ c,d:byte;
+ i,indice:integer;
+BEGIN
+ auxCad:='';
+ car:=' ';
+ indice:=POS('.',cad)+1;
+ IF (indice>0) THEN
+  BEGIN
+   FOR i:=indice TO length(cad) DO
+    BEGIN
+     c:=ORD(cad[i]);
+     d:=(c SHR 4)AND $0F;
+     car:=ByteToChar(d);
+     auxCad:=auxCad+car;
+     d:=(c AND $0F);
+     car:=ByteToChar(d);
+     auxCad:=auxCad+car;
+    END;
+  END;
+ ExtFileToCode39:=auxCad;
+END;
+{---------------------------------------------------------------------------}
+FUNCTION NameFileToCode39(cad:string):string;
+VAR
+ auxCad:string;
+ car:char;
+ c,d:byte;
+ i,indice:integer;
+BEGIN
+ auxCad:='';
+ car:=' ';
+ indice:=POS('.',cad);
+ IF (indice=0) THEN
+  indice:=length(cad);
+ IF (indice>0) THEN
+  BEGIN
+   FOR i:=1 TO indice DO
+    BEGIN
+     c:=ORD(cad[i]);
+     d:=(c SHR 4)AND $0F;
+     car:=ByteToChar(d);
+     auxCad:=auxCad+car;
+     d:=(c AND $0F);
+     car:=ByteToChar(d);
+     auxCad:=auxCad+car;
+    END;
+  END;
+ NameFileToCode39:=auxCad;
+END;
+{---------------------------------------------------------------------------}
 PROCEDURE SendFile(cad:string);
 VAR
  f:FILE of Byte;
@@ -433,7 +497,24 @@ BEGIN
   Reset(f);
   {$I+}
   size:=FileSize(f)-1;
-  FOR i:=0 TO size DO
+
+  cadAux:=NameFileToCode39(cad); {El nombre fichero}
+  EscribeCadena39(linea,'*0'+cadAux+'*',cga320);
+  linea:=linea+10;
+  cadAux:=ExtFileToCode39(cad); {La extension del fichero}
+  EscribeCadena39(linea,'*1'+cadAux+'*',cga320);
+  linea:=linea+10;
+  cadAux:=ByteToString((size SHR 24)AND $00000FF);
+  cadAux:=cadAux+ByteToString((size SHR 16) AND $000000FF);
+  cadAux:=cadAux+ByteToString((size SHR 8) AND $000000FF);
+  cadAux:=cadAux+ByteToString(size AND $000000FF);
+  EscribeCadena39(linea,'*2'+cadAux+'*',cga320); {Tamanio fichero 4 bytes}
+  linea:=linea+10;
+  cadAux:='';
+
+  contLinea:=3;
+  (*FOR i:=0 TO size DO*)
+  FOR i:=0 TO 238 DO
    BEGIN
     read(f,c);
     d:=(c SHR 4)AND $0F;
@@ -442,13 +523,14 @@ BEGIN
     d:=(c AND $0F);
     car:= ByteToChar(d);
     cadAux:=cadAux+car;
-    IF ((i mod 8=0)AND (i<>0)) THEN
+    IF (((i+1) mod 8=0)AND (i<>0)) THEN
      BEGIN
       EscribeCadena39(linea,'*'+ByteToChar(contLinea mod 16)+cadAux+'*',cga320);
       contLinea:=contLinea+1;
       linea:=linea+10;
       IF (linea>80) THEN
        BEGIN
+        readln;
 (*        delay(100);*)
         ClsCga;
         linea:=1;
