@@ -544,7 +544,104 @@ BEGIN
   Close(f);
 END;
 {---------------------------------------------------------------------------}
+PROCEDURE ShowAyuda;
 BEGIN
+ Writeln('Envia y recibe archivos en CODE-39');
+ Writeln('Opciones ');
+ Writeln(' -s Envia fichero');
+ Writeln(' -r Decodifica un fichero encapsulado dentro de un fichero barimage');
+ Writeln('Ejemplos:');
+ Writeln(' Enviar archivo prueba.txt');
+ Writeln('  barcode -s prueba.txt');
+ Writeln(' Recibir archivo desde fichero barimage');
+ Writeln('  barcode -r fichero.txt');
+END;
+{---------------------------------------------------------------------------}
+FUNCTION CharToByte(d:char):byte;
+VAR
+ aResult:byte;
+BEGIN
+ aResult:=0;
+ CASE d OF
+  '0':aResult:=0;
+  '1':aResult:=1;
+  '2':aResult:=2;
+  '3':aResult:=3;
+  '4':aResult:=4;
+  '5':aResult:=5;
+  '6':aResult:=6;
+  '7':aResult:=7;
+  '8':aResult:=8;
+  '9':aResult:=9;
+  'A':aResult:=10;
+  'B':aResult:=11;
+  'C':aResult:=12;
+  'D':aResult:=13;
+  'E':aResult:=14;
+  'F':aResult:=15;
+ END;
+ CharToByte:=aResult;
+END;
+{---------------------------------------------------------------------------}
+FUNCTION StringToByte(d:string):byte;
+VAR
+ aReturn:byte;
+BEGIN
+ aReturn:=0;
+ aReturn:=(CharToByte(d[1]) SHL 4);
+ aReturn:=aReturn OR CharToByte(d[2]);
+ StringToByte:=aReturn;
+END;
+{---------------------------------------------------------------------------}
+PROCEDURE ReceiveFile(cad:string);
+VAR
+ f:TEXT;
+ linea:string;
+ i,ipos,numLinea:integer;
+ aux,cadAux: string;
+ d:byte;
+BEGIN
+ Assign(f,cad);
+ {$I-}
+ Reset(f);
+ {$I+}
+ WHILE NOT eof(f) do
+  BEGIN
+   readln(f,linea);
+   ipos:=pos(':',linea);
+   cadAux:='';
+   FOR i:=(ipos+1) TO length(linea) DO
+    BEGIN
+     cadAux:=cadAux+linea[i]
+    END;
+   numLinea:=CharToByte(cadAux[1]);
+   Write(numLinea);
+   Write(' ');
+   FOR i:=2 TO ((length(cadAux)-1) DIV 2) DO
+    BEGIN
+     aux:=cadAux[i]+cadAux[i+1];
+     d:=StringToByte(aux);
+     (*Write(cadAux[i]); Write(cadAux[i+1]); Write(' ');*)
+     Write(char(d));
+     (*Write(' ');*)
+    END;
+   Write(' ');
+  END;
+ Close(f);
+ readln;
+END;
+
+{---------------------------------------------------------------------------}
+BEGIN
+ IF (paramCount=0) THEN
+  BEGIN
+   ShowAyuda;
+   Exit;
+  END;
+ Clrscr;
+ ReceiveFile('datos.txt');
+ Exit;
+
  globalPosX:=100;
  globalPosY:=30;
 (* grDriver := Detect;*)
